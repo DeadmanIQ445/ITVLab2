@@ -9,9 +9,8 @@
 static char child_stack[1048576];
 
 static int child_fn(void* arg) {
-    system("mount --make-private -o remount /");
     system("mount -t proc proc /proc --make-private");
-
+    system("mount --make-private -o remount /");
     system("ifconfig veth1 10.1.1.1/24 up");
     
     // setting up virt fs
@@ -20,6 +19,8 @@ static int child_fn(void* arg) {
     system("mkfs.ext4 image.img");
     system("mkdir -p /home/fs");
     system("mount -o loop /dev/loop25 /home/fs");
+
+    system("ps aux");
 
     system("cd /home/fs && bash");
     
@@ -31,10 +32,7 @@ static int child_fn(void* arg) {
 }
 
 int main() {
-
-    printf("\n\n");
     pid_t child_pid = clone(child_fn, child_stack+1048576, CLONE_NEWNS|CLONE_NEWNET | CLONE_NEWPID | SIGCHLD, NULL);
-
     char str[80];
     sprintf(str, "echo %d", child_pid);
     system(str);
@@ -44,11 +42,7 @@ int main() {
 
     sprintf(str, "ip link add name veth0 type veth peer name veth1 netns %d", child_pid);
     system(str);
-
-
-
     system("ifconfig veth0 10.1.1.2/24 up");
-
     system("ping -I veth0 -c 3 10.1.1.1");
 
     waitpid(child_pid, NULL, 0);
